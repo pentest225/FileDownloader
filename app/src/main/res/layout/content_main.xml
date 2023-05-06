@@ -70,7 +70,7 @@
         android:layout_height="60dp"
         android:layout_margin="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:progress="0.0"
+
         app:state="completed"/>
 
 

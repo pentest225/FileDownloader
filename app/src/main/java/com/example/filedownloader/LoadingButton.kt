@@ -19,7 +19,7 @@ class LoadingButton @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
     private var widthSize = 0
     private var heightSize = 0
-    private var loadingProgress :Float = 0f
+    private var loadingProgress :Float = -0f
     private var animationRepeatCount = 0
     private val primaryColor = ContextCompat.getColor(context, R.color.colorPrimary)
     private val primaryColorDark = ContextCompat.getColor(context,R.color.colorPrimaryDark)
@@ -52,7 +52,7 @@ class LoadingButton @JvmOverloads constructor(
             loadingProgress = value
             invalidate()
         }
-
+        invalidate()
         valueAnimator.start()
     }
 
@@ -75,7 +75,7 @@ class LoadingButton @JvmOverloads constructor(
         isClickable = true
         context.withStyledAttributes(attrs,R.styleable.LoadingButton){
           buttonStateLabel =  getString(R.styleable.LoadingButton_state) ?: "completed"
-          loadingProgress = getFloat(R.styleable.LoadingButton_progress,0f)
+          loadingProgress = getFloat(R.styleable.LoadingButton_progress,-0f)
         }
         buttonState = ButtonState.getByLabel(buttonStateLabel)
     }
@@ -84,68 +84,72 @@ class LoadingButton @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         widthSize = w
         heightSize = h
+
     }
+    private fun drawText(canvas: Canvas,text:String){
+        paint.color = Color.WHITE
+        val textSize = resources.getDimension(R.dimen.default_text_size)
+        paint.textSize = textSize
+        paint.textAlign = Paint.Align.CENTER
+
+        val baseLineY = heightSize/2f + 10f
+        //Draw Text
+        paint.color = Color.WHITE
+        canvas.drawText(text,widthSize/2f,baseLineY,paint)
+    }
+    private fun drawProgressArc(canvas: Canvas,text: String){
+            //Draw Arc
+            //Draw Rectangle After Text
+            val textWidth = paint.measureText(text)
+            val rectStartX = widthSize/2f + textWidth /2f +10
+            val rectStartY = heightSize * 0.3
+            val rectEndX = rectStartX + 80
+            val rectEndY = rectStartY + 80
+            val rectF = RectF(rectStartX,rectStartY.toFloat(),rectEndX,rectEndY.toFloat())
+            paint.color = secondaryColor
+            val arcProgress = loadingProgress *100 * 350 /100
+            canvas.drawArc(rectF,0f,arcProgress,true,paint)
+
+    }
+    private fun drawLoadingProgressButton(canvas: Canvas){
+        paint.color = primaryColor
+        val buttonRectF = RectF(0f,0f,widthSize.toFloat(),heightSize.toFloat())
+        canvas.drawRect(buttonRectF,paint)
+        paint.color = primaryColorDark
+        val progressRect = loadingProgress*100 * widthSize /100
+        val loadingRectF = RectF(0f,0f,progressRect,heightSize.toFloat())
+        canvas.drawRect(loadingRectF,paint)
+        drawText(canvas,context.getString(R.string.button_loading))
+        drawProgressArc(canvas,context.getString(R.string.button_loading))
+    }
+    private fun drawDefaultButton(canvas: Canvas){
+        paint.color = primaryColor
+        val buttonRectF = RectF(0f,0f,widthSize.toFloat(),heightSize.toFloat())
+        canvas.drawRect(buttonRectF,paint)
+        drawText(canvas,context.getString(R.string.button_label))
+    }
+
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         //Draw any current squiggle
         canvas?.let { canvas ->
-            paint.color = primaryColor
-            val buttonRectF = RectF(0f,0f,widthSize.toFloat(),heightSize.toFloat())
-            canvas.drawRect(buttonRectF,paint)
             //Draw Loading Progress Rectangle
-            paint.color = primaryColorDark
-            val progressRect = loadingProgress*100 * widthSize /100
-            val loadingRectF = RectF(0f,0f,progressRect,heightSize.toFloat())
-            canvas.drawRect(loadingRectF,paint)
-
-            paint.color = Color.WHITE
-            val text:String = getTextContent()
-            val textSize = resources.getDimension(R.dimen.default_text_size)
-
-            paint.textSize = textSize
-            paint.textAlign = Paint.Align.CENTER
-            val textWidth = paint.measureText(text)
-            val baseLineY = heightSize/2f + 10f
-            //Draw Text
-            paint.color = Color.WHITE
-            canvas.drawText(text,widthSize/2f,baseLineY,paint)
-
-
-            //Draw Arc
-            //Draw Rectangle After Text
-            if(buttonState == ButtonState.Loading){
-                val rectStartX = widthSize/2f + textWidth /2f +10
-                val rectStartY = heightSize * 0.3
-                val rectEndX = rectStartX + 80
-                val rectEndY = rectStartY + 80
-
-                val rectF = RectF(rectStartX,rectStartY.toFloat(),rectEndX,rectEndY.toFloat())
-                paint.color = secondaryColor
-                val arcProgress = loadingProgress*100 * 350 /100
-                canvas.drawArc(rectF,0f,arcProgress,true,paint)
+            if(loadingProgress > 0 && loadingProgress < 1){
+                drawLoadingProgressButton(canvas)
+            }else{
+                drawDefaultButton(canvas)
             }
-
-
-
         }
-    }
-
-    private fun drawRect(canvas: Canvas){
-
     }
 
     private fun drawArc(canvas: Canvas){
         paint.color = Color.BLUE
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 10f
-//        canvas.drawRect(rectF,paint)
-//        paint.color = Color.RED
-//        canvas.drawArc(rectF, startAngle, sweepAngle, useCenter, paint)
-//
-//        canvas.drawArc()
     }
     private fun getTextContent():String {
+
         return when(buttonState){
             ButtonState.Clicked -> context.getString(R.string.button_label)
             ButtonState.Completed -> context.getString(R.string.button_label)

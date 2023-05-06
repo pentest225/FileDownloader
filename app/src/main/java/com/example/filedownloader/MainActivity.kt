@@ -26,6 +26,8 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.jar.Manifest
 
@@ -59,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         notificationUtils = NotificationUtils(this)
         notificationManager = ContextCompat.getSystemService(this,NotificationManager::class.java) as NotificationManager
         notificationUtils.createNotificationChannel()
+        //This receiver is call only the download is complete (The download progress is at 100%) so i don't now how to get the download progress
         registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
 
         customButton.setOnClickListener {
@@ -89,17 +92,11 @@ class MainActivity : AppCompatActivity() {
                 customButton.buttonState = ButtonState.Completed
                 //TODO SEND NOTIFICATION HERE
                 if(ContextCompat.checkSelfPermission(this@MainActivity,POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-
-
                     notificationUtils.sendNotification(getDownloadFileTitle(),downloadID)
                 }else{
                     requestNotificationPermission.launch(POST_NOTIFICATIONS)
                 }
             }
-
-
-
-
         }
     }
 
@@ -127,47 +124,50 @@ class MainActivity : AppCompatActivity() {
         val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         downloadID =
             downloadManager.enqueue(request)// enqueue puts the download request in the queue.
-        customButton.buttonState = ButtonState.Loading
-//        listenLoadingProgress()
+        listenLoadingProgress()
     }
+    /**
+     * This function is the way a find to listen the download progress but the (customButton.buttonState) don't work when i call it
+     * */
     private fun listenLoadingProgress(){
-        lifecycleScope.launch {
-            val query = DownloadManager.Query().setFilterById(downloadID)
-            var downloading = true
-            val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-            while (downloading) {
-                val cursor = downloadManager.query(query)
-                cursor.moveToFirst()
-                val downloadBytes = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
-                val totalBites = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
-                val status = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                if(downloadBytes != -1 && totalBites != -1 && status != -1){
-                    val downloadedBytes = cursor.getLong(downloadBytes)
-                    val totalBytes = cursor.getLong(totalBites)
-                    val safeStatus = cursor.getInt(status)
-                    when(safeStatus){
-                        DownloadManager.STATUS_SUCCESSFUL -> {
-                            downloading = false
-                        }
-                        DownloadManager.STATUS_RUNNING -> {
 
-                        }
-                    }
-                    if(safeStatus == DownloadManager.STATUS_SUCCESSFUL){
+        val query = DownloadManager.Query().setFilterById(downloadID)
+        var downloading = true
+        val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        while (downloading) {
+            val cursor = downloadManager.query(query)
+            cursor.moveToFirst()
+            val downloadBytes = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+            val totalBites = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+            val status = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+            if(downloadBytes != -1 && totalBites != -1 && status != -1){
+                val downloadedBytes = cursor.getLong(downloadBytes)
+                val totalBytes = cursor.getLong(totalBites)
+                val safeStatus = cursor.getInt(status)
+                when(safeStatus){
+                    DownloadManager.STATUS_SUCCESSFUL -> {
                         downloading = false
                     }
-                    if(totalBytes != 0L){
-                        val progress = downloadedBytes * 100 / totalBytes
-                        if(progress >= 0){
-                            customButton.setLoadingProgress(progression = progress/100.toFloat())
-                        }
-//                    Log.d("Download Progress", "$progress%")
-                    }
+                    DownloadManager.STATUS_RUNNING -> {
 
+                    }
                 }
-                cursor.close()
+                if(safeStatus == DownloadManager.STATUS_SUCCESSFUL){
+                    downloading = false
+                }
+                if(totalBytes != 0L){
+                    val progress = downloadedBytes * 100 / totalBytes
+                    if(progress >= 0){
+                        customButton.setLoadingProgress(progression = (progress/100).toFloat())
+                        customButton.buttonState = ButtonState.Loading
+                    }
+                    Log.d("Download Progress", "$progress%")
+                }
+
             }
+            cursor.close()
         }
+
 
     }
 
