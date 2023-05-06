@@ -20,15 +20,21 @@ class LoadingButton @JvmOverloads constructor(
     private var widthSize = 0
     private var heightSize = 0
     private var loadingProgress :Float = 0f
+    private var animationRepeatCount = 0
     private val primaryColor = ContextCompat.getColor(context, R.color.colorPrimary)
     private val primaryColorDark = ContextCompat.getColor(context,R.color.colorPrimaryDark)
     private val secondaryColor = ContextCompat.getColor(context,R.color.colorAccent)
-    private val valueAnimator = ValueAnimator.ofFloat(0f,1f)
+    private var valueAnimator = ValueAnimator.ofFloat(0f,1f).apply {
+        duration = 1000
+        repeatCount = animationRepeatCount
+        repeatMode = ValueAnimator.RESTART
+    }
     private var buttonStateLabel : String = ButtonState.Loading.toString()
-    var buttonState: ButtonState by Delegates.observable<ButtonState>(ButtonState.Completed) { p, old, new ->
+    var buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { p, old, new ->
         when(new){
             ButtonState.Loading -> {
-                startAnimation()
+                Log.e("LOADING_STATE", "Setting loading state: ", )
+//                startAnimation()
                 invalidate()
             }
 
@@ -41,22 +47,15 @@ class LoadingButton @JvmOverloads constructor(
         }
     }
     private fun startAnimation(){
-        valueAnimator.duration = 1000
         valueAnimator.addUpdateListener { animator ->
             val value = animator.animatedValue as Float
             loadingProgress = value
             invalidate()
         }
+
         valueAnimator.start()
     }
-    private fun stopAnimation(){
-        valueAnimator.duration = 1000
-        valueAnimator.addUpdateListener { animator ->
-            val value = animator.animatedValue as Float
-            loadingProgress = value
-        }
-        valueAnimator.cancel()
-    }
+
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         textSize = 55.0f
@@ -64,8 +63,12 @@ class LoadingButton @JvmOverloads constructor(
         color = primaryColor
     }
     fun setLoadingProgress(progression:Float){
-        loadingProgress = progression
-        invalidate()
+        ValueAnimator.ofFloat(progression,1f).apply {
+            duration = 1000
+            repeatCount = animationRepeatCount
+            repeatMode = ValueAnimator.RESTART
+        }
+        startAnimation()
     }
 
     init {

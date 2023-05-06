@@ -1,11 +1,13 @@
 package com.example.filedownloader
 
 import android.app.DownloadManager
+import android.app.NotificationManager
 import android.database.Cursor
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import com.example.filedownloader.databinding.ActivityDetailBinding
 
 
@@ -23,6 +25,10 @@ class DetailActivity : AppCompatActivity() {
         binding.tvFileName.text = fileName
         checkDownloadStatus()
         setContentView(binding.root)
+        //Clear all notification
+        val notificationManager = ContextCompat.getSystemService(this,
+        NotificationManager::class.java) as NotificationManager
+        notificationManager.cancelAll()
         binding.btnDone.setOnClickListener {
             finish()
         }
@@ -30,7 +36,7 @@ class DetailActivity : AppCompatActivity() {
 
     private fun checkDownloadStatus(){
         val downloadManager = getSystemService(DownloadManager::class.java) as DownloadManager
-        var finishDownload = false
+
         val cursor: Cursor =
             downloadManager.query(DownloadManager.Query().setFilterById(downloadID))
         if (cursor.moveToFirst()) {
@@ -41,7 +47,6 @@ class DetailActivity : AppCompatActivity() {
                     binding.tvStatus.text = "Fail"
                     binding.tvStatus.setTextColor(resources.getColor(R.color.red))
                 }
-
                 DownloadManager.STATUS_PAUSED -> {
                     binding.tvStatus.text = "Pause"
                 }

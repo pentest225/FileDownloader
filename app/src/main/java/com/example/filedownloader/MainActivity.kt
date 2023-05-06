@@ -25,6 +25,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import java.util.jar.Manifest
 
 
@@ -41,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notificationUtils: NotificationUtils
     private  val requestNotificationPermission = registerForActivityResult(RequestPermission()){isGranted ->
         if(isGranted){
-            //TODO:Send notification
+            //Send notification
             notificationUtils.sendNotification(getDownloadFileTitle(),downloadID)
         }else{
             Toast.makeText(this,"We don't have access to send notification",Toast.LENGTH_SHORT).show()
@@ -57,7 +59,6 @@ class MainActivity : AppCompatActivity() {
         notificationUtils = NotificationUtils(this)
         notificationManager = ContextCompat.getSystemService(this,NotificationManager::class.java) as NotificationManager
         notificationUtils.createNotificationChannel()
-
         registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
 
         customButton.setOnClickListener {
@@ -67,32 +68,41 @@ class MainActivity : AppCompatActivity() {
         radioGroup.setOnCheckedChangeListener {group,checkId ->
             val radioButton = findViewById<RadioButton>(checkId)
             when(checkId){
-                R.id.rb_retrofit_download -> {
+                R.id.rb_glide_download -> {
                     URL = "https://github.com/bumptech/glide"
                 }
-                R.id.rb_glide_download -> {
+                R.id.rb_app_download -> {
                     URL = "https://github.com/udacity/nd940-c3-advanced-android-programming-project-starter"
                 }
-                R.id.rb_app_download -> {
+                R.id.rb_retrofit_download -> {
                     URL = "https://github.com/square/retrofit"
                 }
             }
         }
+
     }
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-            customButton.buttonState = ButtonState.Completed
-            //TODO SEND NOTIFICATION HERE
-            if(ContextCompat.checkSelfPermission(this@MainActivity,POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-                notificationUtils.sendNotification(getDownloadFileTitle(),downloadID)
-            }else{
-                requestNotificationPermission.launch(POST_NOTIFICATIONS)
+            if(id == downloadID){
+                customButton.buttonState = ButtonState.Completed
+                //TODO SEND NOTIFICATION HERE
+                if(ContextCompat.checkSelfPermission(this@MainActivity,POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+
+
+                    notificationUtils.sendNotification(getDownloadFileTitle(),downloadID)
+                }else{
+                    requestNotificationPermission.launch(POST_NOTIFICATIONS)
+                }
             }
+
+
+
 
         }
     }
+
     private fun getDownloadFileTitle():String{
         return when(URL){
             "https://github.com/bumptech/glide"-> getString(R.string.glide_loading_text)
@@ -118,6 +128,46 @@ class MainActivity : AppCompatActivity() {
         downloadID =
             downloadManager.enqueue(request)// enqueue puts the download request in the queue.
         customButton.buttonState = ButtonState.Loading
+//        listenLoadingProgress()
+    }
+    private fun listenLoadingProgress(){
+        lifecycleScope.launch {
+            val query = DownloadManager.Query().setFilterById(downloadID)
+            var downloading = true
+            val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            while (downloading) {
+                val cursor = downloadManager.query(query)
+                cursor.moveToFirst()
+                val downloadBytes = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                val totalBites = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                val status = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                if(downloadBytes != -1 && totalBites != -1 && status != -1){
+                    val downloadedBytes = cursor.getLong(downloadBytes)
+                    val totalBytes = cursor.getLong(totalBites)
+                    val safeStatus = cursor.getInt(status)
+                    when(safeStatus){
+                        DownloadManager.STATUS_SUCCESSFUL -> {
+                            downloading = false
+                        }
+                        DownloadManager.STATUS_RUNNING -> {
+
+                        }
+                    }
+                    if(safeStatus == DownloadManager.STATUS_SUCCESSFUL){
+                        downloading = false
+                    }
+                    if(totalBytes != 0L){
+                        val progress = downloadedBytes * 100 / totalBytes
+                        if(progress >= 0){
+                            customButton.setLoadingProgress(progression = progress/100.toFloat())
+                        }
+//                    Log.d("Download Progress", "$progress%")
+                    }
+
+                }
+                cursor.close()
+            }
+        }
 
     }
 
