@@ -142,7 +142,6 @@ class LoadingButton @JvmOverloads constructor(
             }
         }
     }
-
     private fun drawArc(canvas: Canvas){
         paint.color = Color.BLUE
         paint.style = Paint.Style.STROKE
