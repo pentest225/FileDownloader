@@ -4,6 +4,7 @@ package com.example.filedownloader
 sealed class ButtonState(val label:String) {
     object Clicked : ButtonState(label = "clicked")
     object Loading : ButtonState(label = "loading")
+    object LoadingEnd : ButtonState(label = "loading_end")
     object Completed : ButtonState(label = "completed");
 
     companion object {

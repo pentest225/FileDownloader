@@ -7,11 +7,11 @@ import android.util.AttributeSet
 import android.util.Log
 
 import android.view.View
+import android.widget.Button
 import androidx.core.content.ContextCompat
 import androidx.core.content.withStyledAttributes
 import kotlin.properties.Delegates
-
-
+import kotlin.random.Random
 
 
 class LoadingButton @JvmOverloads constructor(
@@ -19,55 +19,61 @@ class LoadingButton @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
     private var widthSize = 0
     private var heightSize = 0
-    private var loadingProgress :Float = -0f
+    private var loadingProgress :Float = 0F
     private var animationRepeatCount = 0
     private val primaryColor = ContextCompat.getColor(context, R.color.colorPrimary)
     private val primaryColorDark = ContextCompat.getColor(context,R.color.colorPrimaryDark)
     private val secondaryColor = ContextCompat.getColor(context,R.color.colorAccent)
-    private var valueAnimator = ValueAnimator.ofFloat(0f,1f).apply {
-        duration = 1000
-        repeatCount = animationRepeatCount
-        repeatMode = ValueAnimator.RESTART
-    }
+    private var valueAnimator = ValueAnimator()
+    private val randomProgress = (3..7).random() / 10f
     private var buttonStateLabel : String = ButtonState.Loading.toString()
     var buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { p, old, new ->
-        when(new){
-            ButtonState.Loading -> {
-                Log.e("LOADING_STATE", "Setting loading state: ", )
-//                startAnimation()
-                invalidate()
-            }
-
-            ButtonState.Clicked -> {
-                invalidate()
-            }
-            ButtonState.Completed -> {
-                invalidate()
-            }
+        if(old == ButtonState.Completed && new == ButtonState.Loading){
+            //START ANIMATION
+            startAnimation()
+        }
+        if(old == ButtonState.Loading && new == ButtonState.LoadingEnd){
+            //END ANIMATION
+            stopAnimation()
         }
     }
     private fun startAnimation(){
+        valueAnimator = ValueAnimator.ofFloat(0f,randomProgress).apply {
+            duration = 4000
+            repeatCount = animationRepeatCount
+            repeatMode = ValueAnimator.RESTART
+        }
         valueAnimator.addUpdateListener { animator ->
             val value = animator.animatedValue as Float
             loadingProgress = value
             invalidate()
         }
-        invalidate()
         valueAnimator.start()
     }
+    private fun stopAnimation(){
+        valueAnimator = ValueAnimator.ofFloat(randomProgress,1.0f).apply {
+            duration = 1000
+            repeatCount = animationRepeatCount
+            repeatMode = ValueAnimator.RESTART
+        }
+        valueAnimator.addUpdateListener { animator ->
+            val value = animator.animatedValue as Float
+            Log.e("LOADING_BUTTON", "stopAnimation: $value")
+            if(value == 1f){
+                buttonState = ButtonState.Completed
+                invalidate()
+            }
+            loadingProgress = value
+            invalidate()
+        }
+        valueAnimator.start()
+    }
+
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         textSize = 55.0f
         typeface = Typeface.create( "", Typeface.BOLD)
         color = primaryColor
-    }
-    fun setLoadingProgress(progression:Float){
-        ValueAnimator.ofFloat(progression,1f).apply {
-            duration = 1000
-            repeatCount = animationRepeatCount
-            repeatMode = ValueAnimator.RESTART
-        }
-        startAnimation()
     }
 
     init {
@@ -83,17 +89,6 @@ class LoadingButton @JvmOverloads constructor(
         widthSize = w
         heightSize = h
     }
-    private fun drawText(canvas: Canvas,text:String){
-        paint.color = Color.WHITE
-        val textSize = resources.getDimension(R.dimen.default_text_size)
-        paint.textSize = textSize
-        paint.textAlign = Paint.Align.CENTER
-
-        val baseLineY = heightSize/2f + 10f
-        //Draw Text
-        paint.color = Color.WHITE
-        canvas.drawText(text,widthSize/2f,baseLineY,paint)
-    }
     private fun drawProgressArc(canvas: Canvas,text: String){
             //Draw Arc
             //Draw Rectangle After Text
@@ -107,36 +102,52 @@ class LoadingButton @JvmOverloads constructor(
             val arcProgress = loadingProgress *100 * 350 /100
             canvas.drawArc(rectF,0f,arcProgress,true,paint)
     }
-    private fun drawLoadingProgressButton(canvas: Canvas){
+
+
+    private fun drawCustomButton(canvas: Canvas){
+        //1 BACKGROUND RECTANGLE
         paint.color = primaryColor
         val buttonRectF = RectF(0f,0f,widthSize.toFloat(),heightSize.toFloat())
         canvas.drawRect(buttonRectF,paint)
-        paint.color = primaryColorDark
-        val progressRect = loadingProgress*100 * widthSize /100
-        val loadingRectF = RectF(0f,0f,progressRect,heightSize.toFloat())
-        canvas.drawRect(loadingRectF,paint)
-        drawText(canvas,context.getString(R.string.button_loading))
-        drawProgressArc(canvas,context.getString(R.string.button_loading))
-    }
 
-    private fun drawDefaultButton(canvas: Canvas){
-        paint.color = primaryColor
-        val buttonRectF = RectF(0f,0f,widthSize.toFloat(),heightSize.toFloat())
-        canvas.drawRect(buttonRectF,paint)
-        drawText(canvas,context.getString(R.string.button_label))
-    }
+        if(buttonState == ButtonState.Loading || buttonState == ButtonState.LoadingEnd){
+            paint.color = primaryColor
+            val buttonRectF = RectF(0f,0f,widthSize.toFloat(),heightSize.toFloat())
+            canvas.drawRect(buttonRectF,paint)
+            paint.color = primaryColorDark
+            val progressRect = loadingProgress*100 * widthSize /100
+            val loadingRectF = RectF(0f,0f,progressRect,heightSize.toFloat())
+            canvas.drawRect(loadingRectF,paint)
+            //Draw Arc
+            //Draw Rectangle After Text
+            val textWidth = paint.measureText(getTextContent())
+            val rectStartX = widthSize/2f + textWidth /2f +10
+            val rectStartY = heightSize * 0.3
+            val rectEndX = rectStartX + 80
+            val rectEndY = rectStartY + 80
+            val rectF = RectF(rectStartX,rectStartY.toFloat(),rectEndX,rectEndY.toFloat())
+            paint.color = secondaryColor
+            val arcProgress = loadingProgress *100 * 350 /100
+            canvas.drawArc(rectF,0f,arcProgress,true,paint)
+        }
 
+        // TEXT
+        paint.color = Color.WHITE
+        val textSize = resources.getDimension(R.dimen.default_text_size)
+        paint.textSize = textSize
+        paint.textAlign = Paint.Align.CENTER
+
+        val baseLineY = heightSize/2f + 10f
+        //Draw Text
+        paint.color = Color.WHITE
+        canvas.drawText(getTextContent(),widthSize/2f,baseLineY,paint)
+
+    }
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        //Draw any current squiggle
         canvas?.let { canvas ->
-            //Draw Loading Progress Rectangle
-            if(loadingProgress > 0 && loadingProgress < 1){
-                drawLoadingProgressButton(canvas)
-            }else{
-                drawDefaultButton(canvas)
-            }
+            drawCustomButton(canvas)
         }
     }
     private fun drawArc(canvas: Canvas){
@@ -150,6 +161,7 @@ class LoadingButton @JvmOverloads constructor(
             ButtonState.Clicked -> context.getString(R.string.button_label)
             ButtonState.Completed -> context.getString(R.string.button_label)
             ButtonState.Loading -> context.getString(R.string.button_loading)
+            else -> context.getString(R.string.button_loading)
         }
     }
 
