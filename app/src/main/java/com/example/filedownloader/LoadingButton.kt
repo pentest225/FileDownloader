@@ -55,7 +55,6 @@ class LoadingButton @JvmOverloads constructor(
         invalidate()
         valueAnimator.start()
     }
-
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         textSize = 55.0f
@@ -79,12 +78,10 @@ class LoadingButton @JvmOverloads constructor(
         }
         buttonState = ButtonState.getByLabel(buttonStateLabel)
     }
-
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         widthSize = w
         heightSize = h
-
     }
     private fun drawText(canvas: Canvas,text:String){
         paint.color = Color.WHITE
@@ -109,7 +106,6 @@ class LoadingButton @JvmOverloads constructor(
             paint.color = secondaryColor
             val arcProgress = loadingProgress *100 * 350 /100
             canvas.drawArc(rectF,0f,arcProgress,true,paint)
-
     }
     private fun drawLoadingProgressButton(canvas: Canvas){
         paint.color = primaryColor
@@ -122,6 +118,7 @@ class LoadingButton @JvmOverloads constructor(
         drawText(canvas,context.getString(R.string.button_loading))
         drawProgressArc(canvas,context.getString(R.string.button_loading))
     }
+
     private fun drawDefaultButton(canvas: Canvas){
         paint.color = primaryColor
         val buttonRectF = RectF(0f,0f,widthSize.toFloat(),heightSize.toFloat())
